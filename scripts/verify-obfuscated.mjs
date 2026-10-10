@@ -17,7 +17,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SOURCE = path.join(root, 'telegram_webproxy.js');
@@ -56,8 +56,8 @@ try {
   process.exit(1);
 }
 
-const plain = (await import(`file://${plainPath}`)).default;
-const obf = (await import(`file://${obfPath}`)).default;
+const plain = (await import(pathToFileURL(plainPath).href)).default;
+const obf = (await import(pathToFileURL(obfPath).href)).default;
 
 for (const [label, mod] of [['明文', plain], ['混淆', obf]]) {
   if (typeof mod?.fetch !== 'function') bad(`${label}版导出 fetch`, `实际拿到 ${typeof mod?.fetch}`);
