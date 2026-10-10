@@ -1,0 +1,53 @@
+name: Obfuscate Worker Script
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'telegram_webproxy.js'
+      - 'obfuscate.js'
+
+# 默认 GITHUB_TOKEN 是只读，提交产物必须显式放开写权限
+permissions:
+  contents: write
+
+# 混淆器带随机种子，每次产物字节都不同；串行化避免两个 run 同时 push 打架
+concurrency:
+  group: obfuscate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  obfuscate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Obfuscate
+        run: npm run obfuscate
+
+      - name: Verify obfuscated bundle
+        run: npm run check
+
+      - name: Commit and push the obfuscated file
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add telegram_webproxy.obfuscated.js
+          if git diff --staged --quiet; then
+            echo "混淆产物无变化，跳过提交。"
+          else
+            git commit -m "chore: 更新混淆产物"
+            git push
+          fi
